@@ -1,0 +1,296 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Frontier Outpost</title>
+<link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+  <div id="customCursor" style="display: none; position: fixed; pointer-events: none; z-index: 10000; transform: translate(-20%, -20%);">
+    <span style="font-size: 32px; filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.5));">⛏️</span>
+    <span style="position: absolute; top: -4px; right: -8px; font-size: 16px; filter: drop-shadow(1px 2px 3px rgba(0,0,0,0.5));">💜</span>
+  </div>
+
+
+<div id="workbenchUI">
+  <div class="wb-container">
+    <div class="wb-header">
+      <h2>WORKBENCH UPGRADES</h2>
+      <div class="wb-resources">
+        <span>🪵 Wood: <b id="wbWood">0</b></span>
+        <span>🪨 Stone: <b id="wbStone">0</b></span>
+        <span>🫐 Berries: <b id="wbBerries">0</b></span>
+        <span>⚙️ Scrap: <b id="wbScrap">0</b></span>
+      </div>
+    </div>
+    <div class="wb-content">
+      <div class="wb-category">
+        <h3>Ammunition</h3>
+        <div class="wb-grid">
+          <div class="wb-card">
+            <h4>Revolver Ammo (x6)</h4>
+            <p>Craft 6 Revolver bullets</p>
+            <div class="wb-cost">2 Scrap, 2 Stone</div>
+            <button onclick="craftAmmo(2, 0, 2, 2, 6)">CRAFT</button>
+          </div>
+          <div class="wb-card">
+            <h4>Rifle Ammo (x5)</h4>
+            <p>Craft 5 Rifle bullets</p>
+            <div class="wb-cost">3 Scrap, 3 Stone</div>
+            <button onclick="craftAmmo(3, 0, 3, 3, 5)">CRAFT</button>
+          </div>
+        </div>
+      </div>
+      <div class="wb-category">
+        <h3>Weapons</h3>
+        <div class="wb-grid">
+          <div class="wb-card">
+            <h4>Iron Axe</h4>
+            <p>+50% Damage (Axe)</p>
+            <div class="wb-cost">15 Wood, 10 Stone, 5 Scrap</div>
+            <button onclick="upgradeWeapon(0, 15, 10, 5)">CRAFT</button>
+          </div>
+          <div class="wb-card">
+            <h4>Reinforced Rifle</h4>
+            <p>+50% Dmg, +1 Ammo (Rifle)</p>
+            <div class="wb-cost">10 Wood, 20 Stone, 10 Scrap</div>
+            <button onclick="upgradeWeapon(3, 10, 20, 10)">CRAFT</button>
+          </div>
+          <div class="wb-card">
+            <h4>Heavy Revolver</h4>
+            <p>+50% Dmg, +2 Ammo</p>
+            <div class="wb-cost">15 Stone, 5 Scrap</div>
+            <button onclick="upgradeWeapon(2, 0, 15, 5)">CRAFT</button>
+          </div>
+        </div>
+      </div>
+      <div class="wb-category">
+        <h3>Tools</h3>
+        <div class="wb-grid">
+          <div class="wb-card">
+            <h4>Stone Pickaxe</h4>
+            <p>+50% Mining Damage</p>
+            <div class="wb-cost">10 Wood, 10 Stone, 2 Scrap</div>
+            <button onclick="upgradeWeapon(1, 10, 10, 2)">CRAFT</button>
+          </div>
+        </div>
+      </div>
+      <div class="wb-category">
+        <h3>Defense & Utility</h3>
+        <div class="wb-grid">
+          <div class="wb-card">
+            <h4>Reinforced Walls</h4>
+            <p>Walls have +100 HP</p>
+            <div class="wb-cost">30 Wood, 20 Stone</div>
+            <button onclick="upgradeDefense()">CRAFT</button>
+          </div>
+          <div class="wb-card">
+            <h4>Lantern Upgrade</h4>
+            <p>Brighter, wider light</p>
+            <div class="wb-cost">10 Wood, 10 Stone</div>
+            <button onclick="upgradeLantern()">CRAFT</button>
+          </div>
+          <div class="wb-card">
+            <h4>Stamina Training</h4>
+            <p>+50 Max Stamina</p>
+            <div class="wb-cost">20 Berries</div>
+            <button onclick="upgradeStamina()">CRAFT</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="wb-footer">
+      <button class="wb-close" onclick="closeWorkbench()">CLOSE [ESC]</button>
+    </div>
+  </div>
+</div>
+<!-- Overlay / Start + Pause Screen -->
+<div id="overlay">
+  <h1>Frontier Outpost</h1>
+  <div class="subtitle">Survival · Building · Defense</div>
+  <div class="instructions">
+    <span>WASD</span> — Move &nbsp;|&nbsp; <span>MOUSE</span> — Look &nbsp;|&nbsp; <span>Z</span> — Crouch<br>
+    <span>LEFT CLICK</span> — Attack / Shoot &nbsp;|&nbsp; <span>E</span> — Interact / Chop / Mine<br>
+    <span>1</span> — Axe &nbsp;|&nbsp; <span>2</span> — Pickaxe &nbsp;|&nbsp; <span>3</span> — Revolver &nbsp;|&nbsp; <span>4</span> — Rifle<br>
+    <span>R</span> — Reload &nbsp;|&nbsp; <span>TAB</span> — Quick Weapon Swap &nbsp;|&nbsp; <span>SPACE</span> — Jump &nbsp;|&nbsp; <span>SHIFT+SPACE</span> — Dodge Roll<br>
+    <span>B</span> — Build/Place Wood Block &nbsp;|&nbsp; <span>V</span> — Build/Place Stone Block &nbsp;|&nbsp; <span>G</span> — Toggle Build Mode &nbsp;|&nbsp; <span>Q</span> — Demolish Build &nbsp;|&nbsp; <span>ESC</span> — Exit Build Mode<br>
+    <span>F</span> — Place Campfire (requires 2 wood) &nbsp;|&nbsp; <span>T</span> — Place Spike Trap (5W, 5S) &nbsp;|&nbsp; <span>Y</span> — Place Turret (10W, 10S) &nbsp;|&nbsp; <span>U</span> — Place Workbench (15W, 10S) &nbsp;|&nbsp; <span>X</span> — Explosive Barrel (5W, 5S)<br>
+    <span>P</span> — Place Planter Box (10W, 5S) &nbsp;|&nbsp; <span>O</span> — Place Storage Chest (20W)<br>
+    <span>C</span> — Eat Food (Prioritizes Cooked Meat) &nbsp;|&nbsp; <span>H</span> — Quick Heal (consumes 3 Berries for 30 HP)<br>
+    <span>M</span> — Cycle Minimap Zoom &nbsp;|&nbsp; <span>L</span> — Toggle Lantern (helps visibility at night) &nbsp;|&nbsp; <span>I</span> — Toggle Debug Menu &nbsp;|&nbsp; <span>K</span> — Skill Menu<br><br>
+
+    Chop trees for Wood · Mine rocks for Stone · Kill bandits for Ammo · Forage bushes for Berries<br>
+    <span>Night falls every 3 minutes</span> — bandits grow dangerous after dark!
+  </div>
+  <button id="startBtn">Enter the Frontier</button>
+  <button id="resetBtn">Reset World</button>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+  <div id="debugMenu"></div>
+  <div id="vignette"></div>
+  <div id="damageFlash"></div>
+  <div id="crosshair"></div>
+  <div id="hitMarker">
+    <div class="hm-line hm-v"></div>
+    <div class="hm-line hm-h"></div>
+  </div>
+
+  <div id="hudTopLeft">
+    <div id="killFeed"></div>
+  </div>
+
+  <div id="hudTopCenter">
+    <div id="resourceCount">
+      <div class="res-item resource-core">🪵 Wood <span id="woodCount">0</span></div>
+      <div class="res-item resource-core">🪨 Stone <span id="stoneCount">0</span></div>
+      <div class="res-item resource-food">🍒 Berries <span id="resBerries">0</span></div>
+      <div class="res-item resource-food">🥩 Raw Meat <span id="resRawMeat">0</span></div>
+      <div class="res-item resource-food">🍖 Cooked Meat <span id="resCookedMeat">0</span></div>
+      <div class="res-item resource-survival">⚙️ Scrap <span id="scrapCount">0</span></div>
+      <div class="res-item resource-danger">💀 Kills <span id="killCount">0</span></div>
+    </div>
+    <div id="compass">N</div>
+    <div id="targetInfo" style="display:none; text-align:center; background:rgba(0,0,0,0.6); padding:5px 15px; border-radius:10px; border:1px solid rgba(255,255,255,0.2);">
+      <div id="targetName" style="color:white; font-weight:bold; font-size:14px; margin-bottom:4px;">Bandit</div>
+      <div style="width:150px; height:8px; background:#333; border-radius:4px; overflow:hidden;">
+        <div id="targetHealthFill" style="width:100%; height:100%; background:#ff4444;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="hudTopRight">
+    <div id="minimap"><canvas id="minimapCanvas" width="140" height="140"></canvas></div>
+    <div id="hudRightStack">
+      <div id="weatherLabel">CLEAR</div>
+      <div id="dayNightClock">🌞 <span id="timeLabel">DAY</span></div>
+      <div id="dayCounter">Day 1</div>
+      <div id="waveUI">
+        <div id="waveTitle">Next Wave</div>
+        <div class="wave-bar-bg">
+          <div id="waveBar"></div>
+        </div>
+      </div>
+      <div id="alerts"></div>
+    </div>
+  </div>
+
+  <div id="hudBottomLeft">
+    <div id="bars">
+      <div class="bar-row health-row">
+        <span class="bar-label">HEALTH</span>
+        <div class="bar-bg"><div class="bar-fill" id="healthFill" style="width:100%"></div></div>
+      </div>
+      <div class="bar-row stamina-row">
+        <span class="bar-label">STAMINA</span>
+        <div class="bar-bg"><div class="bar-fill" id="staminaFill" style="width:100%"></div></div>
+      </div>
+      <div class="bar-row hunger-row">
+        <span class="bar-label">HUNGER</span>
+        <div class="bar-bg"><div class="bar-fill" id="hungerFill" style="width:100%"></div></div>
+      </div>
+      <div class="bar-row temp-row">
+        <span class="bar-label">TEMP</span>
+        <div class="bar-bg"><div class="bar-fill" id="tempFill" style="width:100%"></div></div>
+      </div>
+    </div>
+    <div id="rollIndicator">⚡ ROLL READY</div>
+  </div>
+
+  <div id="hudBottomCenter">
+    <div id="interactPrompt">[E] Interact</div>
+    <div id="levelBarContainer">
+      <div class="level-text">Level <span id="lvlText">1</span> (<span id="xpText">0/100</span>)</div>
+      <div class="level-bar-bg">
+        <div id="xpFill"></div>
+      </div>
+      <div id="spHint">Press [K] to spend Skill Points!</div>
+    </div>
+    <div id="buildRotateHint">[R] Rotate | [Q] Demolish</div>
+    <div id="buildBar">
+      <span class="build-title">🔨 BUILD MODE</span>
+      <span id="buildStatus" class="build-valid">WALL — VALID</span><br>
+      <span class="build-cost">🪵 3 Wood required</span><br>
+      <span class="build-hint">[B] Place Wood &nbsp;|&nbsp; [V] Place Stone &nbsp;|&nbsp; [ESC] Cancel</span>
+    </div>
+    <div id="hotbar">
+      <div class="hotbar-slot active" id="slot1"><span class="hotbar-key">1</span><span class="slot-icon">🪓</span><span class="slot-name">Axe</span></div>
+      <div class="hotbar-slot" id="slot2"><span class="hotbar-key">2</span><span class="slot-icon">⛏️</span><span class="slot-name">Pickaxe</span></div>
+      <div class="hotbar-slot" id="slot3"><span class="hotbar-key">3</span><span class="slot-icon">🔫</span><span class="slot-name">Revolver</span></div>
+      <div class="hotbar-slot" id="slot4"><span class="hotbar-key">4</span><span class="slot-icon">🎯</span><span class="slot-name">Rifle</span></div>
+    </div>
+  </div>
+
+  <div id="hudBottomRight">
+    <div id="weaponDisplay">
+      <div class="weapon-name" id="weaponName">Axe</div>
+      <div class="ammo-count" id="ammoCount"></div>
+    </div>
+  </div>
+
+  <div id="chestUI" onmousedown="event.stopPropagation()" onclick="event.stopPropagation()" onwheel="event.stopPropagation()">
+    <div class="chest-container">
+      <div class="chest-header">
+        <h2>STORAGE CHEST</h2>
+        <button class="wb-close" onclick="closeChest(event)">CLOSE</button>
+      </div>
+      <div class="chest-content">
+        <div class="chest-section">
+          <h3>Inventory</h3>
+          <div class="chest-item"><span>🪵 Wood: <span id="invWood">0</span></span> <div><button onclick="chestTransfer('wood', 1, false)">1</button> <button onclick="chestTransfer('wood', 999, false)">All</button></div></div>
+          <div class="chest-item"><span>🪨 Stone: <span id="invStone">0</span></span> <div><button onclick="chestTransfer('stone', 1, false)">1</button> <button onclick="chestTransfer('stone', 999, false)">All</button></div></div>
+          <div class="chest-item"><span>⚙️ Scrap: <span id="invScrap">0</span></span> <div><button onclick="chestTransfer('scrap', 1, false)">1</button> <button onclick="chestTransfer('scrap', 999, false)">All</button></div></div>
+          <div class="chest-item"><span>🍒 Berries: <span id="invBerries">0</span></span> <div><button onclick="chestTransfer('berries', 1, false)">1</button> <button onclick="chestTransfer('berries', 999, false)">All</button></div></div>
+          <div class="chest-item"><span>🥩 Raw Meat: <span id="invRawMeat">0</span></span> <div><button onclick="chestTransfer('rawMeat', 1, false)">1</button> <button onclick="chestTransfer('rawMeat', 999, false)">All</button></div></div>
+          <div class="chest-item"><span>🍖 Cooked Meat: <span id="invCookedMeat">0</span></span> <div><button onclick="chestTransfer('cookedMeat', 1, false)">1</button> <button onclick="chestTransfer('cookedMeat', 999, false)">All</button></div></div>
+        </div>
+        <div class="chest-section">
+          <h3>Chest</h3>
+          <div class="chest-item"><span>🪵 Wood: <span id="chestWood">0</span></span> <div><button onclick="chestTransfer('wood', 1, true)">1</button> <button onclick="chestTransfer('wood', 999, true)">All</button></div></div>
+          <div class="chest-item"><span>🪨 Stone: <span id="chestStone">0</span></span> <div><button onclick="chestTransfer('stone', 1, true)">1</button> <button onclick="chestTransfer('stone', 999, true)">All</button></div></div>
+          <div class="chest-item"><span>⚙️ Scrap: <span id="chestScrap">0</span></span> <div><button onclick="chestTransfer('scrap', 1, true)">1</button> <button onclick="chestTransfer('scrap', 999, true)">All</button></div></div>
+          <div class="chest-item"><span>🍒 Berries: <span id="chestBerries">0</span></span> <div><button onclick="chestTransfer('berries', 1, true)">1</button> <button onclick="chestTransfer('berries', 999, true)">All</button></div></div>
+          <div class="chest-item"><span>🥩 Raw Meat: <span id="chestRawMeat">0</span></span> <div><button onclick="chestTransfer('rawMeat', 1, true)">1</button> <button onclick="chestTransfer('rawMeat', 999, true)">All</button></div></div>
+          <div class="chest-item"><span>🍖 Cooked Meat: <span id="chestCookedMeat">0</span></span> <div><button onclick="chestTransfer('cookedMeat', 1, true)">1</button> <button onclick="chestTransfer('cookedMeat', 999, true)">All</button></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="skillMenu" onmousedown="event.stopPropagation()" onclick="event.stopPropagation()" onwheel="event.stopPropagation()">
+    <div class="skill-container">
+      <div class="skill-header">
+        <h2>SKILL TREE</h2>
+        <p>Spend skill points earned from surviving nights and defeating bandits.<br>Click a skill to unlock permanent upgrades that improve combat, survival, and base defense.</p>
+        <div class="skill-points">Available Skill Points: <span id="spCount">0</span></div>
+      </div>
+      <div class="skill-content">
+        <div id="skillCategories" class="skill-grid">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+      <div class="skill-footer">
+        Press [K] or [ESC] to close
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- UPGRADE 2: Alert flash -->
+<div id="alertFlash"></div>
+
+<div id="deathScreen">
+  <h2>YOU DIED</h2>
+  <p>The frontier claims another soul...</p>
+  <button id="respawnBtn">Rise Again</button>
+</div>
+
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>
+
+
