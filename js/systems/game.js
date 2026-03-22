@@ -1057,7 +1057,9 @@ function evaluateBlockPlacement(px, py, pz) {
   if (blocks.has(key)) return { valid: false, reason: 'BLOCKED: occupied', x: tx, y: ty, z: tz };
   if (isBlockNearPlayer(tx, ty, tz)) return { valid: false, reason: 'BLOCKED: too close to player', x: tx, y: ty, z: tz };
 
-  const terrainTop = Math.floor(getTerrainHeight(tx, tz)) + BLOCK_SIZE / 2;
+  // Blocks are stored/validated on integer Y centers in this project,
+  // so terrain support must use the same grid to avoid false "needs support".
+  const terrainTop = Math.floor(getTerrainHeight(tx, tz));
   const minAllowedY = terrainTop - 0.15;
   if (ty < minAllowedY) return { valid: false, reason: 'BLOCKED: inside terrain', x: tx, y: ty, z: tz };
 
@@ -1269,7 +1271,7 @@ function updateBuildPreview() {
     if (hit.object === terrain) {
       px = snapBlockCoord(hit.point.x);
       pz = snapBlockCoord(hit.point.z);
-      py = Math.floor(getTerrainHeight(px, pz)) + BLOCK_SIZE / 2;
+      py = Math.floor(getTerrainHeight(px, pz));
     } else {
       const normal = hit.face.normal.clone().transformDirection(hit.object.matrixWorld).normalize();
       px = snapBlockCoord(hit.object.position.x + normal.x * BLOCK_SIZE);
