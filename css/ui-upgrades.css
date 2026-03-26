@@ -1,0 +1,65 @@
+:root{
+  /* Spacing scale */
+  --space-xxs:4px; --space-xs:8px; --space-s:12px; --space-m:16px; --space-l:24px; --space-xl:36px;
+
+  /* Typography */
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  --type-small:12px; --type-base:14px; --type-lg:16px; --type-xl:18px;
+
+  /* Color tokens */
+  --ui-bg: rgba(12,14,16,0.35); /* subtle glass */
+  --ui-strong: rgba(18,20,22,0.8);
+  --accent: #ffcc44; --danger: #ff5544; --success: #4cd964;
+
+  /* Z-index layering */
+  --z-base: 1000; --z-hud: 1050; --z-minimap: 1070; --z-overlay: 1100; --z-top: 1200;
+}
+
+/* Root HUD container to stabilize anchors and prevent layout thrash */
+#hud{
+  position:fixed; inset:0; pointer-events:none; z-index:var(--z-hud);
+  font-family:var(--font-sans); font-size:var(--type-base);
+}
+#hud > *{ pointer-events:auto; }
+
+/* Crosshair keeps centered and above everything but never large */
+#crosshair{ position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:var(--z-top); width:28px; height:28px; pointer-events:none; }
+
+/* Vignette overlay (cheap, CSS only) */
+#vignette{ position:fixed; inset:0; z-index:var(--z-overlay); pointer-events:none; background:radial-gradient(ellipse at center, rgba(0,0,0,0) 40%, rgba(0,0,0,0.45) 100%); opacity:0; transition:opacity 420ms ease; }
+.low-light #vignette{ opacity:1; }
+
+/* Damage flash */
+#damageFlash{ position:fixed; inset:0; z-index:var(--z-top); pointer-events:none; background:radial-gradient(circle at 60% 40%, rgba(255,120,80,0.18), rgba(0,0,0,0) 40%); opacity:0; transition:opacity 160ms ease; }
+.damage-quick{ opacity:1 !important; transition:none; }
+
+/* Alerts: stacked notifications with smooth entrance */
+#alerts{ display:flex; flex-direction:column; gap:var(--space-xs); align-items:flex-end; }
+.alert{ background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)); color:#fff; padding:var(--space-s) var(--space-m); border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.45); transform:translateY(6px) scale(0.98); opacity:0; transition:transform 220ms cubic-bezier(.2,.9,.2,1), opacity 220ms ease; }
+.alert.show{ transform:none; opacity:1; }
+
+/* Minimap: crisp, high-contrast ring */
+#minimap{ background:var(--ui-bg); border-radius:8px; padding:6px; box-shadow:0 6px 18px rgba(0,0,0,0.45); z-index:var(--z-minimap); }
+#minimap canvas{ display:block; width:140px; height:140px; border-radius:6px; }
+
+/* Hit marker subtle scale & fade */
+#hitMarker{ position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:var(--z-top); pointer-events:none; opacity:0; transition:opacity 180ms ease, transform 180ms ease; }
+#hitMarker.active{ opacity:1; transform:translate(-50%,-50%) scale(1.03); }
+
+/* HUD bars: consistent spacing and layering */
+.bar-row{ display:flex; align-items:center; gap:var(--space-xs); margin-bottom:6px; }
+.bar-bg{ background:rgba(255,255,255,0.05); border-radius:999px; width:220px; height:14px; overflow:hidden; }
+.bar-fill{ height:100%; background:linear-gradient(90deg,var(--accent),#ffd47a); transition:width 280ms ease; }
+
+/* Accessibility high-contrast mode (opt-in class on <body>) */
+body.high-contrast{ filter:none; background:black; }
+body.high-contrast #hud { color: #fff; }
+body.high-contrast .res-item { background: rgba(0,0,0,0.45); padding:2px 6px; border-radius:6px; }
+
+/* Utility: subtle glass panel for popups */
+.panel{ background:var(--ui-bg); border-radius:10px; padding:var(--space-s); backdrop-filter: blur(6px); }
+
+/* Reduce expensive effects on low-power devices */
+@media (prefers-reduced-motion: reduce){
+  *{ transition:none !important; animation:none !important; }
+}

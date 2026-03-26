@@ -6,11 +6,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Frontier Outpost</title>
 <link rel="stylesheet" href="./css/styles.css">
+    <link rel="stylesheet" href="./css/ui.css">
+    <link rel="stylesheet" href="./css/ui-upgrades.css">
 </head>
 <body>
-  <div id="customCursor" style="display: none; position: fixed; pointer-events: none; z-index: 10000; transform: translate(-20%, -20%);">
-    <span style="font-size: 32px; filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.5));">⛏️</span>
-    <span style="position: absolute; top: -4px; right: -8px; font-size: 16px; filter: drop-shadow(1px 2px 3px rgba(0,0,0,0.5));">💜</span>
+  <div id="customCursor" class="custom-cursor" aria-hidden="true">
+    <span class="cursor-main">⛏️</span>
+    <span class="cursor-badge">💜</span>
   </div>
 
 
@@ -154,10 +156,10 @@
       <div class="res-item resource-danger">💀 Kills <span id="killCount">0</span></div>
     </div>
     <div id="compass">N</div>
-    <div id="targetInfo" style="display:none; text-align:center; background:rgba(0,0,0,0.6); padding:5px 15px; border-radius:10px; border:1px solid rgba(255,255,255,0.2);">
-      <div id="targetName" style="color:white; font-weight:bold; font-size:14px; margin-bottom:4px;">Bandit</div>
-      <div style="width:150px; height:8px; background:#333; border-radius:4px; overflow:hidden;">
-        <div id="targetHealthFill" style="width:100%; height:100%; background:#ff4444;"></div>
+    <div id="targetInfo" class="target-info" aria-hidden="true">
+      <div id="targetName" class="target-name">Bandit</div>
+      <div class="target-health-bar">
+        <div id="targetHealthFill" class="target-health-fill"></div>
       </div>
     </div>
   </div>

@@ -7,6 +7,8 @@ import { createGameLoop } from '../core/gameLoop.js';
 import { safeNumber } from '../utils/helpers.js';
 import { createNotificationCenter } from '../ui/notifications.js';
 import { createMinimapController } from '../ui/minimap.js';
+import { initUiManager } from '../ui/uiManager.js';
+import { initVfx } from '../ui/effects/vfxManager.js';
 
 // ─── GLOBALS ─────────────────────────────────────────────────────────────────
 const W = window.innerWidth;
@@ -23,6 +25,9 @@ const notificationCenter = createNotificationCenter({
   killFeedContainer: document.getElementById('killFeed'),
 });
 const minimapController = createMinimapController(document.getElementById('minimapCanvas'));
+// Initialize lightweight UI manager (batches DOM updates) and VFX pooling
+try { initUiManager(); } catch (e) { console.warn('UI Manager init failed', e); }
+try { initVfx(THREE, scene); } catch (e) { console.warn('VFX init failed', e); }
 
 // ─── CLOCK & STATE ────────────────────────────────────────────────────────────
 const clock = new THREE.Clock();
@@ -32,6 +37,8 @@ let kills = 0, wood = 0, stone = 0, berries = 0, scrap = 0;
 let playerHealth = 100, playerMaxHealth = 100;
 let playerLevel = 1, playerXP = 0, playerNextXP = 100, skillPoints = 0;
 let speedMultiplier = 1.0, combatDamageMult = 1.0;
+let adrenalineTimer = 0, adrenalineActive = false;
+const ADRENALINE_DURATION = 6.0, ADRENALINE_BOOST = 0.5;
 let reloadSpeedMult = 1.0, headshotBonus = 2.0, berryGatherMult = 1;
 let staminaDrainMult = 1.0, buildCostMult = 1.0, isReloading = false;
 const SAVE_KEY = 'frontier_outpost_progress_v1';
@@ -1640,6 +1647,7 @@ function createBandit(x, z, isRaid = false) {
     patrolAngle: Math.random()*Math.PI*2,
     patrolCenter: new THREE.Vector3(x,h,z),
     attackCooldown: 0,
+    stunTimer: 0,
     walkCycle: 0,
     lArm, rArm, lLeg, rLeg, body,
     hitFlash: 0,
@@ -1765,6 +1773,8 @@ function explodeBarrel(barrel) {
     if (playerHealth <= 0) triggerDeath();
     document.getElementById('damageFlash').style.boxShadow = 'inset 0 0 150px rgba(255,0,0,0.8)';
   }
+  // Small chance to drop adrenaline from an exploding barrel
+  if (Math.random() < 0.12) spawnDrop('adrenaline', barrel.position, 1);
   scene.remove(barrel); disposeObject(barrel);
   const idx = barrels.indexOf(barrel);
   if (idx > -1) barrels.splice(idx, 1);
@@ -2130,6 +2140,17 @@ function updatePlayer(dt) {
 
   // Roll cooldown
   if (rollCooldown > 0) rollCooldown -= dt;
+
+  // Adrenaline timer (temporary speed boost)
+  if (adrenalineActive) {
+    adrenalineTimer -= dt;
+    if (adrenalineTimer <= 0) {
+      adrenalineActive = false;
+      speedMultiplier = Math.max(0.01, speedMultiplier - ADRENALINE_BOOST);
+      showAlert('Adrenaline worn off', false);
+      updateHUD(0.016);
+    }
+  }
 
   // Camera rotation
   const sens = 0.0018;
@@ -2941,12 +2962,14 @@ function damageBandit(b, dmg, isHeadshot = false) {
   const d=b.userData;
   if (d.isDead) return;
   d.health-=dmg; d.hitFlash=0.25;
-  d.attackCooldown = Math.max(d.attackCooldown, 0.8); // Stagger effect
+  // Short stagger + knockback so player hits feel impactful (cheap, no physics)
+  d.stunTimer = Math.max(d.stunTimer || 0, 0.25);
+  d.attackCooldown = Math.max(d.attackCooldown, 0.8);
   d.state = 'alert';
   d.alertTimer = 0.4;
   spawnFloatingText(b.position.clone().add(new THREE.Vector3(0, 1.5, 0)), isHeadshot ? `CRIT -${dmg}` : `-${dmg}`, isHeadshot ? '#ffcc00' : '#ff4444');
-  const knockDir=new THREE.Vector3().subVectors(b.position,playerBody.position).normalize();
-  b.position.addScaledVector(knockDir,0.3);
+  const knockDir=new THREE.Vector3().subVectors(b.position,playerBody.position).setY(0).normalize();
+  b.position.addScaledVector(knockDir,0.6);
   if(d.health<=0) { d.isDead = true; killBandit(b); triggerHitMarker(true); }
   else { d.target=playerBody; d.exclaim&&(d.exclaim.visible=false); triggerHitMarker(false); }
 }
@@ -3094,6 +3117,15 @@ function updateAI(dt) {
           if(!isHead) c.material.color.set(d.hitFlash>0?0xff4444:(isNight?0x5a1a10:0x8b3a2a));
         }
       }});
+    }
+
+    // Stun timer: if >0, decrement and skip AI movement/attacks while staggered
+    if (d.stunTimer > 0) {
+      d.stunTimer -= dt;
+      if (d.stunTimer > 0) {
+        // still stunned this tick; skip further AI behaviour
+        continue;
+      }
     }
 
     // UPGRADE 2: 3-state awareness machine
@@ -3359,6 +3391,7 @@ function spawnDrop(type, pos, amount) {
   else if (type === 'ammo2') { geo = dropGeoAmmo; mat = MATS_AMMO; }
   else if (type === 'ammo3') { geo = dropGeoAmmo; mat = MATS_AMMO; }
   else if (type === 'scrap') { geo = dropGeoScrap; mat = MATS_SCRAP; }
+  else if (type === 'adrenaline') { geo = dropGeoAmmo; mat = MATS_AMMO; } // reuse small ammo mesh for pickup
   
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.copy(pos);
@@ -3400,6 +3433,18 @@ function updateDrops(dt) {
       if (d.userData.type === 'ammo2') weapons[2].reserveAmmo += d.userData.amount;
       if (d.userData.type === 'ammo3') weapons[3].reserveAmmo += d.userData.amount;
       if (d.userData.type === 'scrap') scrap += d.userData.amount;
+      if (d.userData.type === 'adrenaline') {
+        // Apply a temporary speed boost
+        if (!adrenalineActive) {
+          adrenalineActive = true;
+          adrenalineTimer = ADRENALINE_DURATION;
+          speedMultiplier += ADRENALINE_BOOST;
+          showAlert('Adrenaline! Speed boosted.', false);
+          updateHUD(0.016);
+        } else {
+          showAlert('Adrenaline picked up (already active)', false);
+        }
+      }
       let name = d.userData.type;
       if (name === 'wood') name = 'Wood';
       if (name === 'stone') name = 'Stone';
@@ -3407,7 +3452,8 @@ function updateDrops(dt) {
       if (name === 'ammo2') name = 'Revolver Ammo';
       if (name === 'ammo3') name = 'Rifle Ammo';
       if (name === 'scrap') name = 'Scrap';
-      showAlert(`+${d.userData.amount} ${name}`, false);
+      if (name === 'adrenaline') name = 'Adrenaline';
+      if (d.userData.type !== 'adrenaline') showAlert(`+${d.userData.amount} ${name}`, false);
       updateResources();
       updateHUD(0.016);
       scene.remove(d); disposeObject(d); drops.splice(i, 1);
@@ -3419,6 +3465,7 @@ function updateDrops(dt) {
 const particlePool=[];
 const partGeo=new THREE.SphereGeometry(0.05,4,4); partGeo.userData = { shared: true };
 function spawnParticle(pos,color){
+  if (window.VFX && window.VFX.spawnParticle) { window.VFX.spawnParticle(pos, color); return; }
   for(let i=0;i<5;i++){
     let p=particlePool.find(x=>!x.active);
     if(!p){const mesh=new THREE.Mesh(partGeo,new THREE.MeshLambertMaterial({color, transparent: true}));mesh.active=false;mesh.life=0;scene.add(mesh);p=mesh;particlePool.push(p);}
@@ -3427,7 +3474,7 @@ function spawnParticle(pos,color){
   }
 }
 function updateParticles(dt){
-  for(const p of particlePool){if(!p.active)continue;p.life-=dt;if(p.life<=0){p.active=false;p.position.set(0,-100,0);continue;}p.velocity.y-=9.8*dt;p.position.addScaledVector(p.velocity,dt);p.material.opacity=p.life/0.6;}
+  if (window.VFX && window.VFX.update) { window.VFX.update(dt); } else { for(const p of particlePool){if(!p.active)continue;p.life-=dt;if(p.life<=0){p.active=false;p.position.set(0,-100,0);continue;}p.velocity.y-=9.8*dt;p.position.addScaledVector(p.velocity,dt);p.material.opacity=p.life/0.6;} }
   
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
@@ -4224,14 +4271,18 @@ Object.defineProperty(window, 'isSkillMenuOpen', {
 function showOverlay(isPause){
   gameActive=false;
   currentUIState = UI_STATE.ESC_MENU;
-  const overlay=document.getElementById('overlay'), btn=document.getElementById('startBtn'), rst=document.getElementById('resetBtn');
+  const overlay = document.getElementById('overlay'), btn = document.getElementById('startBtn'), rst = document.getElementById('resetBtn'), hud = document.getElementById('hud');
   overlay.style.display='flex';
-  if(isPause){btn.textContent='Resume Game';rst.style.display='block';}
-  else{btn.textContent='Enter the Frontier';rst.style.display='none';}
+  if (hud) hud.style.display = 'none';
+  document.body.classList.add('ui-active');
+  if(isPause){btn.textContent='Resume Game'; rst.style.display='block';}
+  else{btn.textContent='Enter the Frontier'; rst.style.display='none';}
 }
 function hideOverlayAndLock(){
   document.getElementById('overlay').style.display='none';
-  document.getElementById('hud').style.display='block';
+  const hud = document.getElementById('hud');
+  if (hud) hud.style.display='block';
+  document.body.classList.remove('ui-active');
   renderer.domElement.requestPointerLock();
 }
 
@@ -4323,6 +4374,9 @@ document.addEventListener('pointerlockchange',()=>{
     gameActive=true;
     currentUIState = UI_STATE.GAME;
     document.getElementById('overlay').style.display='none';
+    const hud = document.getElementById('hud');
+    if (hud) hud.style.display = 'block';
+    document.body.classList.remove('ui-active');
   }
   else{
     if(VoxelSystem.active)VoxelSystem.active = false;
